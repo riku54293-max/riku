@@ -60,5 +60,7 @@ npm start
 
 - パーソナルカラー診断ロジックの自動化（現状はユーザーがシーズンを手動選択）
 - 実際のClamAVデーモンとの接続（`backend/src/pipeline/malwareScan.ts` はCLAMAV_HOST未設定時ヒューリスティックのみで動作）
-- 生成画像への電子透かし埋め込み
-- 年齢確認・同意フローのUI実装
+- より強固な電子透かし（周波数領域埋め込み等）への強化
+  - 現状は `backend/src/pipeline/watermark.ts` で可視ウォーターマーク＋AI生成メタデータ付与を実装済み
+- 同意フローの内容の法務レビュー（現状は `mobile/src/screens/ConsentScreen.tsx` で
+  「本人写真のみ」「18歳以上」の同意チェックをアプリ起動時に必須化する簡易実装）

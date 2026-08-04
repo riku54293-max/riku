@@ -7,6 +7,7 @@ import { scanFile } from "../pipeline/malwareScan";
 import { stripAndReencode } from "../pipeline/reencode";
 import { buildTransformationPrompt, TransformationParams } from "../pipeline/buildPrompt";
 import { transformImageWithGemini } from "../pipeline/geminiClient";
+import { applyWatermark } from "../pipeline/watermark";
 import { transformRateLimiter } from "../middleware/rateLimit";
 
 const upload = multer({
@@ -65,8 +66,11 @@ transformRouter.post("/api/transform", transformRateLimiter, upload.single("imag
       prompt,
     });
 
+    const watermarked = await applyWatermark(Buffer.from(result.imageBase64, "base64"));
+
     return res.json({
-      image: `data:${result.mimeType};base64,${result.imageBase64}`,
+      image: `data:image/jpeg;base64,${watermarked.buffer.toString("base64")}`,
+      contentId: watermarked.contentId,
     });
   } catch (error) {
     // eslint-disable-next-line no-console

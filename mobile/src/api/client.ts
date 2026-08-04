@@ -6,6 +6,7 @@ const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://localhost:4
 
 export interface TransformResponse {
   image: string; // data:image/jpeg;base64,... 形式
+  contentId: string; // 生成画像に埋め込まれたコンテンツID(メタデータと一致)
 }
 
 export async function transformPhoto(

@@ -14,6 +14,7 @@ export interface TransformationParams {
 }
 
 export type RootStackParamList = {
+  Consent: undefined;
   Home: undefined;
   Style: { photoUri: string };
   Result: { resultImage: string };
