@@ -26,7 +26,7 @@ export async function stripAndReencode(buffer: Buffer): Promise<ReencodedImage> 
     withoutEnlargement: true,
   });
 
-  // .jpeg() はデフォルトでEXIF/ICC等のメタデータを引き継がない（withMetadata()を呼ばない限り破棄される)
+  // .jpeg() はデフォルトでEXIF/ICC等のメタデータを引き継がない（withMetadata()を呼ばない限り破棄される）
   const outputBuffer = await resized.jpeg({ quality: 90, mozjpeg: true }).toBuffer();
   const metadata = await sharp(outputBuffer).metadata();
 
