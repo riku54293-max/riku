@@ -1,0 +1,78 @@
+import { Router } from "express";
+import multer from "multer";
+import { config } from "../config";
+import { validateImageFile } from "../pipeline/validateFile";
+import { quarantineFile, removeQuarantinedFile } from "../pipeline/quarantine";
+import { scanFile } from "../pipeline/malwareScan";
+import { stripAndReencode } from "../pipeline/reencode";
+import { buildTransformationPrompt, TransformationParams } from "../pipeline/buildPrompt";
+import { transformImageWithGemini } from "../pipeline/geminiClient";
+import { transformRateLimiter } from "../middleware/rateLimit";
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: config.maxUploadBytes },
+});
+
+export const transformRouter = Router();
+
+/**
+ * POST /api/transform
+ * multipart/form-data:
+ *   - image: 写真ファイル (JPEG/PNG/HEIC)
+ *   - params: TransformationParams の一部をJSON文字列で指定(省略可、省略時はデフォルト値)
+ *
+ * パイプライン: ファイル検証 → 隔離保存 → マルウェアスキャン → EXIF除去/再エンコード
+ *              → プロンプト構築(サーバー内部のみ) → Gemini呼び出し → 隔離ファイル削除
+ */
+transformRouter.post("/api/transform", transformRateLimiter, upload.single("image"), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: "image フィールドが必要です" });
+  }
+
+  const validation = validateImageFile(req.file.buffer, config.maxUploadBytes);
+  if (!validation.valid) {
+    return res.status(400).json({ error: validation.reason });
+  }
+
+  const quarantined = await quarantineFile(req.file.buffer, validation.type!);
+
+  try {
+    const scanResult = await scanFile(req.file.buffer);
+    if (!scanResult.clean) {
+      return res.status(400).json({
+        error: "アップロードされたファイルはセキュリティスキャンで拒否されました",
+        detail: scanResult.reason,
+      });
+    }
+
+    const reencoded = await stripAndReencode(req.file.buffer);
+
+    let params: Partial<TransformationParams> = {};
+    if (typeof req.body.params === "string" && req.body.params.length > 0) {
+      try {
+        params = JSON.parse(req.body.params);
+      } catch {
+        return res.status(400).json({ error: "params は有効なJSON文字列である必要があります" });
+      }
+    }
+
+    const prompt = buildTransformationPrompt(params);
+
+    const result = await transformImageWithGemini({
+      imageBuffer: reencoded.buffer,
+      mimeType: reencoded.mimeType,
+      prompt,
+    });
+
+    return res.json({
+      image: `data:${result.mimeType};base64,${result.imageBase64}`,
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error("transform pipeline error:", error);
+    return res.status(500).json({ error: "画像変換中にエラーが発生しました" });
+  } finally {
+    await removeQuarantinedFile(quarantined.filePath);
+  }
+});

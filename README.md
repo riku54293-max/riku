@@ -22,8 +22,43 @@
 - **同意ベースの運用**：本人写真のみアップロード可、未成年保護、生成画像への透かし付与など
   倫理面のガードレールを技術対策と同格で扱う
 
+## プロジェクト構成
+
+- `backend/` — Express + TypeScript製API。アップロード検証→隔離保存→マルウェアスキャン→
+  EXIF除去/再エンコード→プロンプト構築→Gemini画像生成、のセキュリティパイプラインを実装
+- `mobile/` — Expo (React Native + TypeScript) 製スマホアプリ。写真選択→スタイル選択→
+  結果表示の3画面構成
+- `docs/security-firewall.md` — セキュリティ設計の詳細
+- `prompts/transformation_prompt.md` — AIプロンプトの詳細設計（`backend/src/pipeline/buildPrompt.ts` に実装として反映済み）
+
+## セットアップ
+
+### バックエンド
+
+```bash
+cd backend
+npm install
+cp .env.example .env   # GEMINI_API_KEY を設定
+npm run dev
+```
+
+### モバイルアプリ
+
+```bash
+cd mobile
+npm install
+cp .env.example .env   # EXPO_PUBLIC_API_BASE_URL をバックエンドのURLに設定
+npx expo install --fix # Expo SDKと依存バージョンを実行環境に合わせて調整
+npm start
+```
+
+> **注記**：本セッションの開発環境ではnpmレジストリへのアクセスが制限されており、
+> `npm install` によるビルド検証は実施できていません。ローカル環境で `npm install` /
+> `npm run typecheck` を実行して依存関係とビルドを確認してください。
+
 ## 今後の実装候補
 
-- フロントエンド（写真アップロードUI・パラメータ選択UI）
-- バックエンドAPI（隔離バケット→ウイルススキャン→再エンコード→AI呼び出しのパイプライン）
-- パーソナルカラー診断ロジック（ルールベース or 分類モデル）
+- パーソナルカラー診断ロジックの自動化（現状はユーザーがシーズンを手動選択）
+- 実際のClamAVデーモンとの接続（`backend/src/pipeline/malwareScan.ts` はCLAMAV_HOST未設定時ヒューリスティックのみで動作）
+- 生成画像への電子透かし埋め込み
+- 年齢確認・同意フローのUI実装
