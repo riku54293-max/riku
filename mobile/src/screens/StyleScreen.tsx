@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from "react-native";
+import { Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList, TransformationParams } from "../types";
 import OptionPicker from "../components/OptionPicker";
@@ -9,16 +9,9 @@ type Props = NativeStackScreenProps<RootStackParamList, "Style">;
 
 const MAKEUP_STYLES = ["清楚系ナチュラル", "韓国系(オルチャン)", "モード系", "ゴージャス", "パーティー"];
 const HAIR_LENGTHS = ["ショート", "ボブ", "ミディアム", "ロング"];
-const UNDERTONES = ["イエベ春", "イエベ秋", "ブルベ夏", "ブルベ冬"];
+const AUTO_DETECT = "AIにおまかせ(推奨)";
+const UNDERTONES = [AUTO_DETECT, "イエベ春", "イエベ秋", "ブルベ夏", "ブルベ冬"];
 const STYLE_CONCEPTS = ["清楚系", "モード系", "ロリータ系", "OL系", "カジュアル系", "ゴージャス系"];
-
-// パーソナルカラー(シーズン)に応じたメイク・ヘアカラーのデフォルト値
-const SEASON_DEFAULTS: Record<string, Partial<TransformationParams>> = {
-  イエベ春: { eyeshadowPalette: "コーラル×アイボリー", lipColor: "コーラルピンク", hairColor: "暖かみのあるブラウン" },
-  イエベ秋: { eyeshadowPalette: "テラコッタ×ブラウン", lipColor: "ブリックレッド", hairColor: "カーキブラウン" },
-  ブルベ夏: { eyeshadowPalette: "ラベンダー×グレージュ", lipColor: "ローズピンク", hairColor: "アッシュブラウン" },
-  ブルベ冬: { eyeshadowPalette: "モノトーン×ボルドー", lipColor: "ボルドーレッド", hairColor: "ダークアッシュ" },
-};
 
 export default function StyleScreen({ route, navigation }: Props) {
   const { photoUri } = route.params;
@@ -34,12 +27,14 @@ export default function StyleScreen({ route, navigation }: Props) {
       const params: Partial<TransformationParams> = {
         makeupStyle,
         hairLength,
-        undertone,
         styleConcept,
-        ...SEASON_DEFAULTS[undertone],
       };
-      const resultImage = await transformPhoto(photoUri, params);
-      navigation.navigate("Result", { resultImage });
+      // 「AIにおまかせ」の場合はundertoneを送らず、バックエンドに写真から自動診断させる
+      if (undertone !== AUTO_DETECT) {
+        params.undertone = undertone;
+      }
+      const { image, detectedPersonalColor } = await transformPhoto(photoUri, params);
+      navigation.navigate("Result", { resultImage: image, detectedPersonalColor });
     } catch (error) {
       Alert.alert("エラー", error instanceof Error ? error.message : "変換に失敗しました");
     } finally {
@@ -54,6 +49,12 @@ export default function StyleScreen({ route, navigation }: Props) {
       <OptionPicker label="メイクスタイル" options={MAKEUP_STYLES} value={makeupStyle} onChange={setMakeupStyle} />
       <OptionPicker label="髪の長さ" options={HAIR_LENGTHS} value={hairLength} onChange={setHairLength} />
       <OptionPicker label="パーソナルカラー" options={UNDERTONES} value={undertone} onChange={setUndertone} />
+      {undertone === AUTO_DETECT && (
+        <Text style={styles.hint}>
+          写真から肌の色味を解析し、4シーズンのいずれかを自動で提案します(簡易的な推定のため、
+          結果画面で表示される診断は目安としてご利用ください)
+        </Text>
+      )}
       <OptionPicker label="全体コンセプト" options={STYLE_CONCEPTS} value={styleConcept} onChange={setStyleConcept} />
 
       <TouchableOpacity style={styles.submitButton} onPress={submit} disabled={loading}>
@@ -66,6 +67,7 @@ export default function StyleScreen({ route, navigation }: Props) {
 const styles = StyleSheet.create({
   container: { padding: 24, paddingBottom: 48 },
   title: { fontSize: 20, fontWeight: "700", marginBottom: 20, textAlign: "center" },
+  hint: { fontSize: 12, color: "#888", marginTop: -12, marginBottom: 20 },
   submitButton: {
     backgroundColor: "#e8548a",
     paddingVertical: 16,

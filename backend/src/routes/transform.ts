@@ -8,6 +8,7 @@ import { stripAndReencode } from "../pipeline/reencode";
 import { buildTransformationPrompt, TransformationParams } from "../pipeline/buildPrompt";
 import { transformImageWithGemini } from "../pipeline/geminiClient";
 import { applyWatermark } from "../pipeline/watermark";
+import { estimatePersonalColor } from "../pipeline/personalColor";
 import { transformRateLimiter } from "../middleware/rateLimit";
 
 const upload = multer({
@@ -58,6 +59,13 @@ transformRouter.post("/api/transform", transformRateLimiter, upload.single("imag
       }
     }
 
+    let detectedPersonalColor: { season: string; confidence: number } | undefined;
+    if (!params.undertone) {
+      const estimate = await estimatePersonalColor(reencoded.buffer);
+      params.undertone = estimate.season;
+      detectedPersonalColor = { season: estimate.season, confidence: estimate.confidence };
+    }
+
     const prompt = buildTransformationPrompt(params);
 
     const result = await transformImageWithGemini({
@@ -71,6 +79,7 @@ transformRouter.post("/api/transform", transformRateLimiter, upload.single("imag
     return res.json({
       image: `data:image/jpeg;base64,${watermarked.buffer.toString("base64")}`,
       contentId: watermarked.contentId,
+      detectedPersonalColor,
     });
   } catch (error) {
     // eslint-disable-next-line no-console

@@ -4,6 +4,8 @@
  * クライアント（モバイルアプリ）には一切送信しない（プロンプト非開示方針）。
  */
 
+import { Season, SEASON_PALETTES } from "./personalColor";
+
 export interface TransformationParams {
   skinFinish: string;
   browStyle: string;
@@ -15,21 +17,21 @@ export interface TransformationParams {
   makeupStyle: string;
   hairLength: string;
   hairColor: string;
-  undertone: string;
+  undertone: Season;
   styleConcept: string;
 }
 
 export const DEFAULT_PARAMS: TransformationParams = {
   skinFinish: "セミマット",
   browStyle: "緩やかなカーブ",
-  eyeshadowPalette: "オータムパレット(テラコッタ×ブラウン)",
+  eyeshadowPalette: SEASON_PALETTES["イエベ春"].eyeshadowPalette,
   eyelinerShape: "タレ目ライン",
   cheekPosition: "頬骨に丸く",
-  lipColor: "コーラルベージュ",
+  lipColor: SEASON_PALETTES["イエベ春"].lipColor,
   lipFinish: "ティント",
   makeupStyle: "清楚系ナチュラル",
   hairLength: "ミディアム",
-  hairColor: "暖かみのあるブラウン",
+  hairColor: SEASON_PALETTES["イエベ春"].hairColor,
   undertone: "イエベ春",
   styleConcept: "清楚系",
 };
@@ -53,7 +55,10 @@ const IDENTITY_CONSTRAINTS = `【出力制約】
 - 実在の第三者になりすます・特定の有名人に似せる加工は行わないこと`;
 
 export function buildTransformationPrompt(overrides: Partial<TransformationParams> = {}): string {
-  const p: TransformationParams = { ...DEFAULT_PARAMS, ...overrides };
+  // undertone(シーズン)が指定された場合、そのシーズンの推奨パレットをデフォルトとして
+  // 適用してから、明示的なoverridesで最終上書きする(色彩のプロ視点の一貫性を保つため)
+  const seasonPalette = overrides.undertone ? SEASON_PALETTES[overrides.undertone] : undefined;
+  const p: TransformationParams = { ...DEFAULT_PARAMS, ...seasonPalette, ...overrides };
 
   const styleInstructions = `【メイクアップ指示】
 - ベースメイク仕上げ: ${p.skinFinish}

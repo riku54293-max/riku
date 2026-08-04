@@ -13,9 +13,14 @@ export interface TransformationParams {
   styleConcept: string;
 }
 
+export interface DetectedPersonalColor {
+  season: string;
+  confidence: number;
+}
+
 export type RootStackParamList = {
   Consent: undefined;
   Home: undefined;
   Style: { photoUri: string };
-  Result: { resultImage: string };
+  Result: { resultImage: string; detectedPersonalColor?: DetectedPersonalColor };
 };
