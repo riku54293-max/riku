@@ -1,0 +1,18 @@
+services:
+  clamav:
+    image: clamav/clamav:1.3
+    container_name: crossdressing-app-clamav
+    ports:
+      - "3310:3310"
+    volumes:
+      - clamav-db:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s # 初回起動時はウイルス定義DB(freshclam)のダウンロードに数分かかる
+    restart: unless-stopped
+
+volumes:
+  clamav-db:

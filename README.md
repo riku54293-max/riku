@@ -33,12 +33,23 @@
 
 ## セットアップ
 
+### ClamAV（マルウェアスキャン）
+
+```bash
+docker compose up -d clamav
+```
+
+初回起動時はウイルス定義DB（freshclam）のダウンロードに数分かかります。
+`docker compose ps` で `healthy` になってからバックエンドを起動してください。
+`CLAMAV_HOST` を設定しない場合、バックエンドはヒューリスティックスキャンのみで動作します
+（本番運用では非推奨。詳細は [`docs/security-firewall.md`](docs/security-firewall.md) 参照）。
+
 ### バックエンド
 
 ```bash
 cd backend
 npm install
-cp .env.example .env   # GEMINI_API_KEY を設定
+cp .env.example .env   # GEMINI_API_KEY を設定（CLAMAV_HOST はデフォルトで localhost）
 npm run dev
 ```
 
@@ -59,7 +70,6 @@ npm start
 ## 今後の実装候補
 
 - パーソナルカラー診断ロジックの自動化（現状はユーザーがシーズンを手動選択）
-- 実際のClamAVデーモンとの接続（`backend/src/pipeline/malwareScan.ts` はCLAMAV_HOST未設定時ヒューリスティックのみで動作）
 - より強固な電子透かし（周波数領域埋め込み等）への強化
   - 現状は `backend/src/pipeline/watermark.ts` で可視ウォーターマーク＋AI生成メタデータ付与を実装済み
 - 同意フローの内容の法務レビュー（現状は `mobile/src/screens/ConsentScreen.tsx` で
