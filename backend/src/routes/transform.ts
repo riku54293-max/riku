@@ -6,7 +6,7 @@ import { quarantineFile, removeQuarantinedFile } from "../pipeline/quarantine";
 import { scanFile } from "../pipeline/malwareScan";
 import { stripAndReencode } from "../pipeline/reencode";
 import { buildTransformationPrompt, TransformationParams } from "../pipeline/buildPrompt";
-import { transformImageWithGemini } from "../pipeline/geminiClient";
+import { transformImageWithGemini, GeminiPolicyRefusalError } from "../pipeline/geminiClient";
 import { applyWatermark } from "../pipeline/watermark";
 import { estimatePersonalColor } from "../pipeline/personalColor";
 import { transformRateLimiter } from "../middleware/rateLimit";
@@ -82,6 +82,17 @@ transformRouter.post("/api/transform", transformRateLimiter, upload.single("imag
       detectedPersonalColor,
     });
   } catch (error) {
+    if (error instanceof GeminiPolicyRefusalError) {
+      // eslint-disable-next-line no-console
+      console.warn("Gemini policy refusal:", error.reason);
+      return res.status(422).json({
+        error:
+          "AIの安全ポリシーにより、この写真の変換はリクエストできませんでした。" +
+          "別の写真や設定でお試しください。",
+        code: "POLICY_REFUSED",
+        reason: error.reason,
+      });
+    }
     // eslint-disable-next-line no-console
     console.error("transform pipeline error:", error);
     return res.status(500).json({ error: "画像変換中にエラーが発生しました" });

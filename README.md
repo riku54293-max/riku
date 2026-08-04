@@ -67,6 +67,17 @@ npm start
 > `npm install` によるビルド検証は実施できていません。ローカル環境で `npm install` /
 > `npm run typecheck` を実行して依存関係とビルドを確認してください。
 
+## 既知のリスク: Gemini APIのポリシー適合性
+
+2026年2月のGoogle側ポリシー強化（通称Nano Banana 2）で、実在人物の顔・服装の
+入れ替えに関する安全フィルタが強化されている。本人同意ベースの自撮り編集は
+許容される想定だが、モデル側の安全フィルタが個別リクエストを拒否するケースが
+実運用で発生し得る。`backend/src/pipeline/geminiClient.ts` の `GeminiPolicyRefusalError`
+で拒否理由を検知し、`routes/transform.ts` がHTTP 422でユーザーに分かりやすい
+メッセージを返すようにしているが、根本的な拒否率は実際のAPIキーでテストしないと
+分からない。**本番投入前に必ず実写真でテストし、Google Cloud/Gemini APIの
+公式ポリシーページも直接確認すること。**
+
 ## 今後の実装候補
 
 - より強固な電子透かし（周波数領域埋め込み等）への強化
