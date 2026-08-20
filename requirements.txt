@@ -1,0 +1,9 @@
+anthropic>=0.40.0
+moviepy>=1.0.3,<2.0
+numpy>=1.24
+Pillow>=10.0
+
+# 別途システムにインストールが必要（pipでは入りません）:
+#   - ffmpeg / ffprobe (BGM/画像の尺取得・動画書き出しに使用)
+#   - VOICEPEAK 本体 + CLI (ナレーション音声合成。公式サイトからインストールし、
+#     config/settings.py の VOICEPEAK_PATH でパスを指定してください)
